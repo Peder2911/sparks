@@ -26,12 +26,12 @@ import (
 )
 
 type login_request struct {
-   UserName string
-   Password string
+   UserName string `json:"username"`
+   Password string `json:"password"`
 }
 
 type login_response struct {
-   AccessToken string
+   AccessToken string `json:"access_token"`
 }
 
 type JwtVerifier struct {
@@ -174,6 +174,7 @@ func NewAuthHandler(secret []byte, mountpoint string, connect func()(*sql.DB)) *
          log.Println(fmt.Sprintf("Failed to serialize JWT: %s", err))
          return
       }
+      log.Println(fmt.Sprintf("Served a token to %s", user_name))
    })
    return auth
 }
