@@ -35,24 +35,43 @@ func NewApiHandler(base_path string, game Game) (http.Handler) {
          log.Println(fmt.Sprintf("Failed to upgrade a request to websocket: %s", err))
          return
       }
+
+      log.Println("Logging in")
+      callback := make(chan chan Entity)
+      log.Println("Sending callback")
+      game.Logins <- callback
+      log.Println("Receiving client channel")
+      client_channel := <- callback 
+      log.Println("Reading some stuff")
+      player := <- client_channel
+      log.Println("Finished reading")
+      defer game.Logout(player.Index)
+      ws, err := conn.NextWriter(websocket.TextMessage)
+      if err != nil {
+         return
+      }
+      json.NewEncoder(ws).Encode(player)
+      if err := ws.Close() ; err != nil {
+         return
+      }
+
+      if err != nil {
+         log.Println(fmt.Sprintf("Failed to get websocket writer"))
+         return
+      }
+      log.Println(fmt.Sprintf("Serving traffic to %s", username))
+      
       for {
-         player_index := game.Login()
-         player := game.Entities[player_index]
-         defer game.Logout(player_index)
-         message_type, p, err := conn.ReadMessage()
-         if err != nil {
-            log.Println(fmt.Sprintf("Error while reading from websocket: %s", err))
-            break
-         }
-         if message_type != websocket.TextMessage {
-            log.Println(fmt.Sprintf("Received binary message (not supported)"))
-            break
-         }      
-         err = conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("Hello, %s! You said %v", username, string(p))))
-         err = conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("You are located at %v, %v", player[1],player[2])))
-         if err != nil {
-            log.Println(fmt.Sprintf("Error while writing: %s", err))
-            break
+         select {
+            case entity := <- client_channel:
+               ws, err := conn.NextWriter(websocket.TextMessage)
+               if err != nil {
+                  break
+               }
+               json.NewEncoder(ws).Encode(entity)
+               if err = ws.Close(); err != nil {
+                  break
+               }
          }
       }
    })

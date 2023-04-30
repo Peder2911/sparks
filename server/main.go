@@ -23,9 +23,9 @@ func main(){
    initialize(db_connect)
    mux := http.NewServeMux()
    game := NewGame()
-   go game.Loop()
    mux.Handle("/auth/", NewAuthHandler(secret, "/auth", db_connect))
    mux.Handle("/api/", NewJwtVerifier(NewApiHandler("/api", game), secret))
+   go game.Loop()
    err = http.ListenAndServe("0.0.0.0:8000", mux)
    panic(err)
 }
