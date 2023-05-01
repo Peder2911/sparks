@@ -36,29 +36,10 @@ func NewApiHandler(base_path string, game Game) (http.Handler) {
          return
       }
 
-      log.Println("Logging in")
-      callback := make(chan chan Entity)
-      log.Println("Sending callback")
+      callback := make(chan chan Delta)
       game.Logins <- callback
-      log.Println("Receiving client channel")
       client_channel := <- callback 
-      log.Println("Reading some stuff")
-      player := <- client_channel
-      log.Println("Finished reading")
-      defer game.Logout(player.Index)
-      ws, err := conn.NextWriter(websocket.TextMessage)
-      if err != nil {
-         return
-      }
-      json.NewEncoder(ws).Encode(player)
-      if err := ws.Close() ; err != nil {
-         return
-      }
 
-      if err != nil {
-         log.Println(fmt.Sprintf("Failed to get websocket writer"))
-         return
-      }
       log.Println(fmt.Sprintf("Serving traffic to %s", username))
       
       for {
