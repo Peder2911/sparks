@@ -61,21 +61,43 @@ func (verifier *JwtVerifier) Verify (token_string string) (*jwt.Token, error) {
    }
 }
 
-func (verifier *JwtVerifier) ServeHTTP (w http.ResponseWriter, r *http.Request) {
+func (verifier *JwtVerifier) token_from_header(r *http.Request) (string, error) {
    var err error
    regex, err := regexp.Compile("(?:Bearer )(.*)")
    if err != nil {
       panic(fmt.Sprintf("Failed to compile regexp: %s", err))
    }
-
    match := regex.FindSubmatch([]byte(r.Header.Get("Authorization")))
    if len(match) != 2 {
-      log.Println(fmt.Sprintf("Failed to parse token from Authorization header: %s", match))
-      w.WriteHeader(401)
-      return
+      return "", fmt.Errorf("Failed to parse token from Authorization header: %s", match)
+   }
+   return string(match[1]), nil 
+}
+
+func (verifier *JwtVerifier) token_from_query_parameter(r *http.Request) (string, error) {
+   query_values := r.URL.Query()
+   if tokens := query_values["token"]; len(tokens) == 1 {
+      return tokens[0], nil
+   } else {
+      return "", fmt.Errorf("No token query parameter, or multiple token query parameters passed (only want one).")
+   }
+}
+
+func (verifier *JwtVerifier) ServeHTTP (w http.ResponseWriter, r *http.Request) {
+   var err error
+   var encoded_token string
+   
+   encoded_token, err = verifier.token_from_header(r)
+   if err != nil {
+      encoded_token, err = verifier.token_from_query_parameter(r)
+      if err != nil {
+         log.Println(fmt.Sprintf("No token was passed: %s", err))
+         w.WriteHeader(401)
+         return
+      }
    }
 
-   token, err := verifier.Verify(string(match[1]))
+   token, err := verifier.Verify(encoded_token)
    if err != nil {
       log.Println(fmt.Sprintf("Failed to verify token: %s", err))
       w.WriteHeader(401)

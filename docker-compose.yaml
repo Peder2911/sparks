@@ -1,0 +1,35 @@
+version: "3"
+services:
+   traefik:
+      image: "traefik:v2.10"
+      container_name: "traefik"
+      ports:
+         - "8000:8000"
+         - "8080:8080"
+      volumes:
+         - "/var/run/docker.sock:/var/run/docker.sock:ro"
+         - "./traefik.yaml:/etc/traefik/traefik.yaml"
+
+   backend:
+      build: "./server"
+      labels:
+         - "traefik.enable=true"
+         - "traefik.http.routers.backend.entrypoints=web"
+         - "traefik.http.routers.backend.rule=PathPrefix(`/api`)"
+         - "traefik.http.middlewares.backend-strip.stripprefix.prefixes=/api"
+         - "traefik.http.middlewares.backend-strip.stripprefix.forceslash=false"
+         - "traefik.http.routers.backend.middlewares=backend-strip"
+      expose: 
+         - "8080"
+
+   frontend:
+      image: "nginx:1.25.0"
+      labels:
+         - "traefik.enable=true"
+         - "traefik.http.routers.frontend.entrypoints=web"
+         - "traefik.http.routers.frontend.rule=PathPrefix(`/`)"
+      expose: 
+         - "80"
+      volumes:
+         - "./client:/usr/share/nginx/html"
+

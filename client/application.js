@@ -12,9 +12,9 @@ class Application {
       this.el.appendChild(content)
    }
 
-   game_starter(token){
+   game_starter(){
       var self = this
-      return () => {
+      return (token) => {
          self.game.initialize(token)
          self.set_content(self.game.el())
       }

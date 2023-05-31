@@ -42,7 +42,7 @@ func main(){
    mux.Handle("/auth/", NewAuthHandler(secret, "/auth", db_connect))
    mux.Handle("/api/", NewJwtVerifier(NewApiHandler("/api", game), secret))
    go game.Loop()
-   log.Println("Serving on :8000")
-   err = http.ListenAndServe("0.0.0.0:8000", mux)
+   log.Println("Serving on :8080")
+   err = http.ListenAndServe("0.0.0.0:8080", mux)
    panic(err)
 }

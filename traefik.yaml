@@ -1,0 +1,8 @@
+api:
+   insecure: true
+providers:
+   docker: 
+      exposedbydefault: false
+entrypoints:
+   web:
+      address: ":8000"

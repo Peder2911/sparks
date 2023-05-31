@@ -11,14 +11,6 @@ class Game {
       this.stop_button = document.createElement("button")
       this.stop_button.innerHTML = "Stop"
       this.stop_button.onclick = stop_game
-
-      // TODO cannot send headers when opening a new websocket!
-      //
-      // This means I need to make some backend changes hmmmmm
-      this.socket = new WebSocket("ws://localhost:8080/api/session")
-      this.socket.onmessage = (e) => {
-         console.log(e)
-      }
    }
 
    stop(){
@@ -26,8 +18,12 @@ class Game {
    }
 
    initialize(token){
-      this.ctx.fillRect(10,10,10,10)
       console.log("Starting the game!!")
+      this.ctx.fillRect(10,10,10,10)
+      this.socket = new WebSocket(`ws://${document.location.host}/api/api/session?token=${token}`)
+      this.socket.onmessage = (e) => {
+         console.log(e)
+      }
    }
 
    el(){

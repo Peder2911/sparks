@@ -26,8 +26,12 @@ class LoginPage {
       return form
    }
 
-   handle_login(username, password){
-      console.log(`Trying to log in with ${username} ${password}`)
-      this.on_login("mocktoken")
+   async handle_login(username, password){
+      let response = await fetch("/api/auth/token",{
+         method : "POST",
+         body: JSON.stringify({username: username, password: password})
+      })
+      let data = await response.json()
+      this.on_login(data.access_token)
    }
 }
