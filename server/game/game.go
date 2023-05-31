@@ -10,7 +10,7 @@ of the whole game state.
 
 */
 
-package game 
+package game
 
 import (
    "time"

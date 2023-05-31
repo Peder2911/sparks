@@ -124,18 +124,45 @@ func (e *Ecs) Iterate(overrides []Delta) []Delta {
       e.Set(override[0],override[1],override[2])
    }
 
-   e.move()
+   e.physics()
    e.control()
-   e.inertia()
 
    deltas := e.deltas
    e.deltas = nil 
    return deltas
 }
 
-func (e *Ecs) move(){
+func (e *Ecs) physics(){
    for i := 0 ; i < e.Index.Current ; i++ {
       if e.Get(i,Status) != 0 {
+         xvel, yvel, inertia := e.Get(i, Xvel), e.Get(i, Yvel), e.Get(i, Inertia)
+         var xinertia, yinertia int
+ 
+         // Calculate and apply inertia for x and y
+         if xvel < 0 {
+            xinertia = inertia * -1
+         } else if xvel > 0 {
+            xinertia = inertia
+         } else {
+            xinertia = 0
+         }
+         if xinertia > 0 {
+            e.Set(i,Xvel,xvel - xinertia)
+         }
+
+         if yvel < 0 {
+            yinertia = inertia * -1
+         } else if yvel > 0 {
+            yinertia = inertia
+         } else {
+            yinertia = 0
+         }
+         if yinertia > 0 {
+            e.Set(i,Yvel,yvel - yinertia)
+         }
+
+         // Apply speed to position
+         // TODO colision detection?
          if xvel := e.Get(i,Xvel); xvel > 0 {
             e.Set(i, X, e.Get(i, X) + e.Get(i, Xvel))
          }
@@ -158,35 +185,6 @@ func (e *Ecs) control(){
             e.Set(i, Yvel, e.Get(i, Speed * ymoving))
          }
       }
-   }
-}
-
-func (e *Ecs) inertia(){
-   for i := 0 ; i < e.Index.Current ; i++ {
-      xvel, yvel, inertia := e.Get(i, Xvel), e.Get(i, Yvel), e.Get(i, Inertia)
-      var xinertia, yinertia int
-      if xvel < 0 {
-         xinertia = inertia * -1
-      } else if xvel > 0 {
-         xinertia = inertia
-      } else {
-         xinertia = 0
-      }
-      if xinertia > 0 {
-         e.Set(i,Xvel,xvel - xinertia)
-      }
-
-      if yvel < 0 {
-         yinertia = inertia * -1
-      } else if yvel > 0 {
-         yinertia = inertia
-      } else {
-         yinertia = 0
-      }
-      if yinertia > 0 {
-         e.Set(i,Yvel,yvel - yinertia)
-      }
-
    }
 }
 
