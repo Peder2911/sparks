@@ -10,7 +10,7 @@ of the whole game state.
 
 */
 
-package game
+package gameserver
 
 import (
    "time"
@@ -18,33 +18,36 @@ import (
    "fmt"
    "github.com/peder2911/sparks/server/ecs"
    "github.com/peder2911/sparks/server/client"
+   "context"
 )
 
-
-type Game struct {
+type GameServer struct {
    ecs ecs.Ecs
    Clients map[int] client.Client
    Logins chan client.LoginHandshake
-   Inputs chan client.ClientInput
+   Inputs chan client.IdentifiedClientMessage
    Unregister chan int
-   Cancel chan int
+   Cancel context.CancelFunc
+   Context context.Context
    //current_inputs []protocol.ClientMessage
    override_buffer []ecs.Delta
 }
 
-func NewGame() Game {
-   game := Game{}
+func NewGameServer(ctx context.Context) GameServer {
+   cancelcontext, cancel  := context.WithCancel(ctx)
+   game := GameServer{}
    game.ecs = ecs.NewEcs()
    game.Clients = make(map[int] client.Client)
    game.Logins = make(chan client.LoginHandshake)
-   game.Inputs = make(chan client.ClientInput)
+   game.Inputs = make(chan client.IdentifiedClientMessage)
    game.Unregister = make(chan int) 
-   game.Cancel = make(chan int) 
+   game.Cancel = cancel 
+   game.Context = cancelcontext
    game.override_buffer = nil
    return game
 }
 
-func (g *Game) Login() client.Client {
+func (g *GameServer) Login() client.Client {
    new_client := client.NewClient(g.ecs.Create(ecs.DefaultEntity()), make(chan ecs.Delta), g.Inputs, g.Unregister)
    g.Clients[new_client.Id] = new_client 
    // Get new player up to speed
@@ -52,33 +55,33 @@ func (g *Game) Login() client.Client {
    return new_client
 }
 
-func (g *Game) Logout(index int) {
+func (g *GameServer) Logout(index int) {
    g.ecs.Destroy(index)
    delete(g.Clients, index)
 }
 
-func (g *Game) Cleanup() {
+func (g *GameServer) Cleanup() {
 }
 
-func (g *Game) BootstrapClient(id int){
+func (g *GameServer) BootstrapClient(id int){
    client := g.Clients[id]
    for _,delta := range g.ecs.Snapshot() {
       client.Deltas <- delta
    }
 }
 
-func (g *Game) flush_overrides() []ecs.Delta {
+func (g *GameServer) flush_overrides() []ecs.Delta {
    overrides := g.override_buffer
    g.override_buffer = nil
    return overrides 
 }
 
-func (g *Game) Iterate() []ecs.Delta {
+func (g *GameServer) Iterate() []ecs.Delta {
    return g.ecs.Iterate(g.flush_overrides())
 }
 
-func (g *Game) Loop() {
-   tick := time.Tick(1000 * time.Millisecond)
+func (g *GameServer) Loop() {
+   tick := time.Tick(10 * time.Millisecond)
    for {
       select {
          case handshake := <- g.Logins:
@@ -86,6 +89,8 @@ func (g *Game) Loop() {
             log.Println(fmt.Sprintf("Got a new login with id %v", new_client.Id))
             handshake.Callback <- &new_client
          case logmeout := <- g.Unregister:
+            log.Println(fmt.Sprintf("Logging out %v", logmeout))
+            g.ecs.Destroy(logmeout)
             delete(g.Clients,logmeout)
          case input := <- g.Inputs:
             input_delta, err := client.InputToDelta(input)
@@ -99,7 +104,7 @@ func (g *Game) Loop() {
                   client.Deltas <- delta
                }
             }
-         case <- g.Cancel:
+         case <- g.Context.Done():
             g.Cleanup()
             return
       }

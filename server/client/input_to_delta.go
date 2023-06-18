@@ -7,17 +7,17 @@ import (
    "fmt"
 )
 
-func InputToDelta(input ClientInput) (ecs.Delta, error) {
+func InputToDelta(input IdentifiedClientMessage) (ecs.Delta, error) {
    var err error
    var message protocol.ClientMessage = input.Message
    var delta ecs.Delta = ecs.Delta{input.Id,0,0}
    if message.Action == protocol.Press {
       if message.Key == protocol.Up {
          delta[1] = ecs.YMoving
-         delta[2] = 1
+         delta[2] = -1
       } else if message.Key == protocol.Down {
          delta[1] = ecs.YMoving
-         delta[2] = -1
+         delta[2] = 1
       } else if message.Key == protocol.Left {
          delta[1] = ecs.XMoving
          delta[2] = -1 
@@ -49,6 +49,7 @@ func InputToDelta(input ClientInput) (ecs.Delta, error) {
       err = fmt.Errorf("Failed to parse input into delta.") 
       return delta, err
    }
+
 
    return delta, err
 }

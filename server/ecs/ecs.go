@@ -3,11 +3,9 @@ Sparks ECS
 
 Sparks uses an ECS to hold and manipulate the game state.
 */
-package ecs 
+package ecs
 
 import (
-   "fmt"
-   "log"
 )
 
 const EntitySize = 9
@@ -120,7 +118,6 @@ func (e *Ecs) Set(i int, j int, v int) {
 func (e *Ecs) Iterate(overrides []Delta) []Delta {
 
    for _,override := range overrides {
-      log.Println("Doing an override")
       e.Set(override[0],override[1],override[2])
    }
 
@@ -146,7 +143,7 @@ func (e *Ecs) physics(){
          } else {
             xinertia = 0
          }
-         if xinertia > 0 {
+         if xinertia != 0 {
             e.Set(i,Xvel,xvel - xinertia)
          }
 
@@ -157,17 +154,17 @@ func (e *Ecs) physics(){
          } else {
             yinertia = 0
          }
-         if yinertia > 0 {
+         if yinertia != 0 {
             e.Set(i,Yvel,yvel - yinertia)
          }
 
          // Apply speed to position
          // TODO colision detection?
-         if xvel := e.Get(i,Xvel); xvel > 0 {
-            e.Set(i, X, e.Get(i, X) + e.Get(i, Xvel))
+         if xvel := e.Get(i,Xvel); xvel != 0 {
+            e.Set(i, X, e.Get(i, X) + xvel)
          }
-         if yvel := e.Get(i,Yvel); yvel > 0 {
-            e.Set(i, Y, e.Get(i, Y) + e.Get(i, Yvel))
+         if yvel := e.Get(i,Yvel); yvel != 0 {
+            e.Set(i, Y, e.Get(i, Y) + yvel)
          }
       }
    }
@@ -177,12 +174,10 @@ func (e *Ecs) control(){
    for i := 0 ; i < e.Index.Current ; i++ {
       if e.Get(i,Status) != 0 {
          if xmoving := e.Get(i,XMoving); xmoving != 0 {
-            log.Println(fmt.Sprintf("Moving x: %v", xmoving))
-            e.Set(i, Xvel, e.Get(i, Speed * xmoving))
+            e.Set(i, Xvel, e.Get(i, Speed) * xmoving)
          }
          if ymoving := e.Get(i,YMoving); ymoving != 0 {
-            log.Println(fmt.Sprintf("Moving y: %v", ymoving))
-            e.Set(i, Yvel, e.Get(i, Speed * ymoving))
+            e.Set(i, Yvel, e.Get(i, Speed) * ymoving)
          }
       }
    }

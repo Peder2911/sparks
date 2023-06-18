@@ -25,3 +25,7 @@ type ClientMessage struct {
 type ServerMessage struct {
    Delta [3]int `json:"delta"`
 }
+
+type GoodbyeMessage struct {
+   Message string `json:"message"`
+}

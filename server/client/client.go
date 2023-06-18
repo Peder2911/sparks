@@ -1,43 +1,39 @@
-/*
-The Sparks client.
-
-This object is responsible for handling a single client session. It is
-instantiated by the Game object and is passed back to a session where it is
-hooked up to the websocket.
-*/
+// The client package contains code for handling client sessions.
 package client
 
 import (
-   "github.com/gorilla/websocket"
-   "github.com/peder2911/sparks/server/ecs"
-   "github.com/peder2911/sparks/server/protocol"
-   "log"
-   "fmt"
-)
+	"context"
+	"fmt"
+	"log"
 
-type ClientInput struct {
-   Id int
-   Message protocol.ClientMessage
-}
+	"github.com/gorilla/websocket"
+	"github.com/peder2911/sparks/server/ecs"
+	"github.com/peder2911/sparks/server/protocol"
+)
 
 type Client struct {
    Id int
    Deltas chan ecs.Delta
-   Inputs chan ClientInput
-   Unregister chan int 
+   Inputs chan IdentifiedClientMessage
+   Unregister chan int
    delta_buffer []ecs.Delta
+}
+
+type IdentifiedClientMessage struct {
+   Id int
+   Message protocol.ClientMessage
 }
 
 type LoginHandshake struct {
    Callback chan *Client
 }
 
-func NewClient(id int, deltas chan ecs.Delta, inputs chan ClientInput, unregister chan int) Client {
+func NewClient(id int, deltas chan ecs.Delta, inputs chan IdentifiedClientMessage, unregister chan int) Client {
    return Client {
       Id: id,
       Deltas: deltas,
       Inputs: inputs,
-      Unregister: unregister, 
+      Unregister: unregister,
       delta_buffer: make([]ecs.Delta, 128),
    }
 }
@@ -48,31 +44,48 @@ func (c *Client) flush_deltas() []ecs.Delta {
    return deltas
 }
 
-func (c *Client) ServeWs(con *websocket.Conn) {
-   go c.receive(con)
-   go c.send(con)
+// ServeWs
+//
+// Send and receive data with the clients websocket.
+func (c *Client) ServeWs(ctx context.Context, con *websocket.Conn) {
+   cctx, cancel := context.WithCancel(ctx)
+   go c.receive(cctx, cancel, con)
+   go c.send(cctx, con)
 }
 
-func (c *Client) send(con *websocket.Conn) {
+// send
+//
+// Send data to the clients websocket. This goroutine also handles cleanup if
+// the context is cancelled.
+func (c *Client) send(ctx context.Context, con *websocket.Conn) {
    for {
-      delta := <- c.Deltas
-      message := protocol.ServerMessage{Delta: delta}
-      con.WriteJSON(message)
+      select {
+         case delta := <- c.Deltas:
+            message := protocol.ServerMessage{Delta: delta}
+            con.WriteJSON(message)
+         case <- ctx.Done():
+            log.Println(fmt.Sprintf("Cleaning up client %v", c.Id))
+            goodbye := protocol.GoodbyeMessage{Message:"goodbye!"}
+            con.WriteJSON(goodbye)
+            c.Unregister <- c.Id
+            return
+      }
    }
 }
 
-func (c *Client) cleanup(){
-   c.Unregister <- c.Id
-}
-
-func (c *Client) receive(con *websocket.Conn) {
-   defer c.cleanup()
+// receive
+//
+// Receive data from the clients websocket. The client will end its session if
+// the input cannot be deserialized as a ClientMessage.
+func (c *Client) receive(ctx context.Context, cancel context.CancelFunc, con *websocket.Conn) {
    for {
       var message protocol.ClientMessage
       err := con.ReadJSON(&message)
       if err != nil {
-         log.Println(fmt.Sprintf("Received weird input!: %s",err))
+         log.Println(fmt.Sprintf("Received weird input! Ending session: %s",err))
+         cancel()
+         return
       }
-      c.Inputs <- ClientInput{Id: c.Id, Message: message}
+      c.Inputs <- IdentifiedClientMessage{Id: c.Id, Message: message}
    }
 }

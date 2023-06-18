@@ -6,7 +6,7 @@ RUN go mod download
 COPY *.go ./
 COPY ./client ./client 
 COPY ./ecs ./ecs
-COPY ./game ./game
+COPY ./gameserver ./gameserver
 COPY ./session ./session
 COPY ./protocol ./protocol
 RUN CGO_ENABLED=1 GOOS=linux go build -o /sparks
