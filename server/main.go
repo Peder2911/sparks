@@ -35,7 +35,7 @@ import (
 var secret []byte = []byte("4321")
 
 func main(){
-   var err error 
+   var err error
    var ctx = context.Background()
    initialize(db_connect)
    mux := http.NewServeMux()

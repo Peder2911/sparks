@@ -95,7 +95,7 @@ func (e *Ecs) Create(entity Entity) int{
    }
 
    for j,v := range entity {
-      e.entities[i][j] = v
+      e.Set(i,j,v)
    }
 
    return i 

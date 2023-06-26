@@ -58,6 +58,8 @@ func (c *Client) ServeWs(ctx context.Context, con *websocket.Conn) {
 // Send data to the clients websocket. This goroutine also handles cleanup if
 // the context is cancelled.
 func (c *Client) send(ctx context.Context, con *websocket.Conn) {
+
+   // Handshake
    for {
       select {
          case delta := <- c.Deltas:

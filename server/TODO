@@ -1,0 +1,8 @@
+
+Mon 26 Jun 2023 10:17:00 PM CEST
+
+Add a handshake thing to the server when a new client logs on. Make the client know which ID to follow.
+
+Make the camera follow the player in the client code, now that it know which ID to follow.
+
+Maybe make the canvas fullscreen?
