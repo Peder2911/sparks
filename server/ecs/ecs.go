@@ -5,22 +5,25 @@ Sparks uses an ECS to hold and manipulate the game state.
 */
 package ecs
 
-import (
-)
+import "math/rand"
 
-const EntitySize = 9
+const EntitySize = 11
+const WorldSizeX = 400
+const WorldSizeY = 400
 
 // Entity indices
 const (
-   Status  int = iota 
+   Status  int = iota
    X
    Y
    Xvel
    Yvel
    XMoving
    YMoving
-   Speed 
-   Inertia 
+   Speed
+   Inertia
+   Size
+   Value
 )
 
 type Index struct {
@@ -58,14 +61,16 @@ type Entity [EntitySize]int
 func DefaultEntity() Entity {
    entity := Entity{}
    entity[Status] = 1
-   entity[X] = 0
-   entity[Y] = 0
+   entity[X] = rand.Intn(WorldSizeX) 
+   entity[Y] = rand.Intn(WorldSizeY) 
    entity[Xvel] = 0
    entity[Yvel] = 0
    entity[XMoving] = 0
    entity[YMoving] = 0
    entity[Speed] = 4
    entity[Inertia] = 1
+   entity[Size] = 1
+   entity[Value] = 0
    return entity
 }
 
@@ -102,7 +107,7 @@ func (e *Ecs) Create(entity Entity) int{
 }
 
 func (e *Ecs) Destroy(i int){
-   e.entities[i][0] = 0
+   e.Set(i, Status, 0)
    e.Index.Recycle(i)
 }
 
@@ -160,11 +165,22 @@ func (e *Ecs) physics(){
 
          // Apply speed to position
          // TODO colision detection?
+         var new_position int
          if xvel := e.Get(i,Xvel); xvel != 0 {
-            e.Set(i, X, e.Get(i, X) + xvel)
+            new_position = e.Get(i,X) + xvel
+            if new_position < WorldSizeX && new_position > 0 {
+               e.Set(i, X, new_position) 
+            } else {
+               e.Set(i, Xvel, -e.Get(i, Xvel))
+            }
          }
          if yvel := e.Get(i,Yvel); yvel != 0 {
-            e.Set(i, Y, e.Get(i, Y) + yvel)
+            new_position = e.Get(i,Y) + yvel
+            if new_position < WorldSizeY && new_position > 0 {
+               e.Set(i, Y, new_position) 
+            } else {
+               e.Set(i, Yvel, -e.Get(i, Yvel))
+            }
          }
       }
    }
